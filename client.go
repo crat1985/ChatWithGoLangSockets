@@ -129,11 +129,11 @@ func listenForMessages() {
 			continue
 		}
 		msgString := string(slice[:n])
-		msgEntry := widget.NewEntry()
+		msgEntry := widget.NewMultiLineEntry()
 		msgEntry.Disable()
 		msgEntry.SetText(msgString)
-		msgEntryMax := container.NewMax(msgEntry)
-		messagesBox.Add(msgEntryMax)
+		msgEntry.Wrapping = fyne.TextWrapWord
+		messagesBox.Add(msgEntry)
 		log.Print(msgString)
 	}
 }

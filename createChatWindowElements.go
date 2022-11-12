@@ -14,11 +14,11 @@ func createSendMessageContainer() *fyne.Container {
 }
 
 func createMessageBoxScroll() *container.Scroll {
-	messageEntry := widget.NewEntry()
+	messageEntry := widget.NewMultiLineEntry()
 	messageEntry.SetText("test\ntest\nmdr")
 	messageEntry.Disable()
-	messageEntry.Wrapping = fyne.TextTruncate
 	messageEntry.ExtendBaseWidget(messageEntry)
+	messageEntry.Wrapping = fyne.TextWrapWord
 	messagesBox = container.NewVBox(messageEntry)
 	return container.NewScroll(messagesBox)
 }
