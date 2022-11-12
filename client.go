@@ -1,8 +1,6 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net"
 
@@ -16,24 +14,6 @@ import (
 type loginInfos struct {
 	pseudo   string
 	password string
-}
-
-type customSendMessageEntry struct {
-	widget.Entry
-	OnTypedKey func(key *fyne.KeyEvent)
-}
-
-func NewCustomSendMessageEntry() *customSendMessageEntry {
-	e := &customSendMessageEntry{}
-	e.Wrapping = fyne.TextTruncate
-	e.ExtendBaseWidget(e)
-	return e
-}
-
-func (m *customSendMessageEntry) TypedKey(key *fyne.KeyEvent) {
-	if key.Name == "Return" {
-		sendMessage()
-	}
 }
 
 var conn net.Conn
@@ -62,19 +42,16 @@ func main() {
 	w.ShowAndRun()
 }
 
-func loginFunction() {
-	if loginButton.Text == "..." {
-		return
-	}
-	loginWin = a.NewWindow("Se connecter")
-	loginButton.SetText("...")
-	loginButton.Disable()
+func displayErr(err error) {
+	dialog.NewError(err, loginWin).Show()
+}
 
-	loginWin.SetOnClosed(func() {
-		loginButton.SetText("Se connecter")
-		loginButton.Enable()
-	})
+func loginWinClosed() {
+	loginButton.SetText("Se connecter")
+	loginButton.Enable()
+}
 
+func createLoginForm() *widget.Form {
 	serverAddressEntry = widget.NewEntry()
 	serverAddressEntry.SetPlaceHolder("localhost")
 	serverPortEntry = widget.NewEntry()
@@ -83,7 +60,6 @@ func loginFunction() {
 	pseudoEntry.SetPlaceHolder("Pseudo")
 	passwordEntry = widget.NewPasswordEntry()
 	passwordEntry.SetPlaceHolder("Mot de passe")
-
 	form := widget.NewForm(
 		widget.NewFormItem("Adresse du serveur :", serverAddressEntry),
 		widget.NewFormItem("Port du serveur :", serverPortEntry),
@@ -92,6 +68,14 @@ func loginFunction() {
 	)
 	form.OnCancel = loginWin.Close
 	form.OnSubmit = submited
+	return form
+}
+
+func createLoginWin() {
+	loginWin = a.NewWindow("Se connecter")
+	loginWin.SetOnClosed(loginWinClosed)
+
+	form := createLoginForm()
 
 	loginWin.SetContent(form)
 	form.Resize(fyne.NewSize(400, form.Size().Height))
@@ -101,76 +85,23 @@ func loginFunction() {
 	loginWin.Show()
 }
 
-func checkInfos() (bool, string) {
-	if pseudoEntry.Text == "" {
-		dialog.NewError(errors.New("veuillez entrer un pseudo"), loginWin).Show()
-		return false, ""
+func loginFunction() {
+	if loginButton.Text == "..." {
+		return
 	}
-	if passwordEntry.Text == "" {
-		dialog.NewError(errors.New("veuillez entrer un mot de passe"), loginWin).Show()
-		return false, ""
-	}
-	loginInfosVar = loginInfos{pseudo: pseudoEntry.Text, password: passwordEntry.Text}
-	return true, loginInfosVar.pseudo + ":" + loginInfosVar.password
+
+	loginButton.SetText("...")
+	loginButton.Disable()
+
+	createLoginWin()
 }
 
-func submited() {
-	infosOk, infos := checkInfos()
-	if !infosOk {
-		return
-	}
-	var err error
-	var address string
-	var port string
-	if serverAddressEntry.Text == "" {
-		address = serverAddressEntry.PlaceHolder
-	}
-	if serverPortEntry.Text == "" {
-		port = serverPortEntry.PlaceHolder
-	}
-	conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", address, port))
-	if err != nil {
-		dialog.NewError(err, loginWin).Show()
-		return
-	}
-	_, err = conn.Write([]byte(infos))
-	if err != nil {
-		dialog.NewError(err, loginWin).Show()
-		return
-	}
-	response := make([]byte, 1024)
-	n, err := conn.Read(response)
-	if err != nil {
-		dialog.NewError(err, loginWin).Show()
-		return
-	}
-	var stringResponse string = string(response[:n])
-	if stringResponse == "no" {
-		dialog.NewError(errors.New("informations de connexion invalides"), loginWin).Show()
-		return
-	}
-	if stringResponse != "yes" {
-		return
-	}
-	loginWin.Close()
-	modifyWindowToBeAbleToSendMessages()
-}
-
-func modifyWindowToBeAbleToSendMessages() {
+func displayChatWin() {
 	chatWin = a.NewWindow("Chat")
 	//Bottom
-	sendMessageEntry = NewCustomSendMessageEntry()
-	sendMessageEntry.SetPlaceHolder("Votre message ici")
-	sendButton = widget.NewButton("Envoyer", sendMessage)
-	sendMessageContainer := container.NewBorder(nil, nil, nil, sendButton, sendMessageEntry)
+	sendMessageContainer := createSendMessageContainer()
 	//Top
-	messageEntry := widget.NewEntry()
-	messageEntry.SetText("test\ntest\nmdr")
-	messageEntry.Disable()
-	messageEntry.Wrapping = fyne.TextTruncate
-	messageEntry.ExtendBaseWidget(messageEntry)
-	messagesBox = container.NewVBox(messageEntry)
-	messagesBoxScroll = container.NewScroll(messagesBox)
+	messagesBoxScroll = createMessageBoxScroll()
 	all := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBoxScroll)
 	w.Close()
 	chatWin.SetContent(all)
@@ -182,8 +113,7 @@ func modifyWindowToBeAbleToSendMessages() {
 func sendMessage() {
 	_, err := conn.Write([]byte(sendMessageEntry.Text))
 	if err != nil {
-		dialog.NewError(err, loginWin).Show()
-		return
+		displayErr(err)
 	}
 	sendMessageEntry.SetText("")
 	chatWin.Canvas().Focus(sendMessageEntry)
@@ -195,7 +125,7 @@ func listenForMessages() {
 		slice := make([]byte, 1024)
 		n, err := conn.Read(slice)
 		if err != nil {
-			dialog.NewError(err, loginWin).Show()
+			dialog.NewError(err, chatWin).Show()
 			continue
 		}
 		msgString := string(slice[:n])
