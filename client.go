@@ -18,6 +18,24 @@ type loginInfos struct {
 	password string
 }
 
+type customSendMessageEntry struct {
+	widget.Entry
+	OnTypedKey func(key *fyne.KeyEvent)
+}
+
+func NewCustomSendMessageEntry() *customSendMessageEntry {
+	e := &customSendMessageEntry{}
+	e.Wrapping = fyne.TextTruncate
+	e.ExtendBaseWidget(e)
+	return e
+}
+
+func (m *customSendMessageEntry) TypedKey(key *fyne.KeyEvent) {
+	if key.Name == "Return" {
+		sendMessage()
+	}
+}
+
 var conn net.Conn
 var a fyne.App
 var w fyne.Window
@@ -30,8 +48,9 @@ var passwordEntry *widget.Entry
 var loginWin fyne.Window
 var messagesBox *fyne.Container
 var sendButton *widget.Button
-var sendMessageEntry *widget.Entry
+var sendMessageEntry *customSendMessageEntry
 var messagesBoxScroll *container.Scroll
+var chatWin fyne.Window
 
 func main() {
 	a = app.New()
@@ -114,33 +133,33 @@ func submited() {
 		dialog.NewError(err, loginWin).Show()
 		return
 	}
-	for {
-		_, err := conn.Write([]byte(infos))
-		if err != nil {
-			continue
-		}
-		response := make([]byte, 1024)
-		n, err := conn.Read(response)
-		if err != nil {
-			dialog.NewError(err, loginWin).Show()
-			continue
-		}
-		var stringResponse string = string(response[:n])
-		if stringResponse == "no" {
-			dialog.NewError(errors.New("informations de connexion invalides"), loginWin).Show()
-			return
-		}
-		if stringResponse == "yes" {
-			break
-		}
+	_, err = conn.Write([]byte(infos))
+	if err != nil {
+		dialog.NewError(err, loginWin).Show()
+		return
+	}
+	response := make([]byte, 1024)
+	n, err := conn.Read(response)
+	if err != nil {
+		dialog.NewError(err, loginWin).Show()
+		return
+	}
+	var stringResponse string = string(response[:n])
+	if stringResponse == "no" {
+		dialog.NewError(errors.New("informations de connexion invalides"), loginWin).Show()
+		return
+	}
+	if stringResponse != "yes" {
+		return
 	}
 	loginWin.Close()
 	modifyWindowToBeAbleToSendMessages()
 }
 
 func modifyWindowToBeAbleToSendMessages() {
+	chatWin = a.NewWindow("Chat")
 	//Bottom
-	sendMessageEntry = widget.NewEntry()
+	sendMessageEntry = NewCustomSendMessageEntry()
 	sendMessageEntry.SetPlaceHolder("Votre message ici")
 	sendButton = widget.NewButton("Envoyer", sendMessage)
 	sendMessageContainer := container.NewBorder(nil, nil, nil, sendButton, sendMessageEntry)
@@ -148,10 +167,15 @@ func modifyWindowToBeAbleToSendMessages() {
 	messageEntry := widget.NewEntry()
 	messageEntry.SetText("test\ntest\nmdr")
 	messageEntry.Disable()
+	messageEntry.Wrapping = fyne.TextTruncate
+	messageEntry.ExtendBaseWidget(messageEntry)
 	messagesBox = container.NewVBox(messageEntry)
 	messagesBoxScroll = container.NewScroll(messagesBox)
 	all := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBoxScroll)
-	w.SetContent(all)
+	w.Close()
+	chatWin.SetContent(all)
+	chatWin.Resize(fyne.NewSize(720, 480))
+	chatWin.Show()
 	listenForMessages()
 }
 
@@ -162,6 +186,8 @@ func sendMessage() {
 		return
 	}
 	sendMessageEntry.SetText("")
+	chatWin.Canvas().Focus(sendMessageEntry)
+	messagesBoxScroll.ScrollToBottom()
 }
 
 func listenForMessages() {
