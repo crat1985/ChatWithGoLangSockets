@@ -30,6 +30,8 @@ var passwordEntry *widget.Entry
 var loginWin fyne.Window
 var messagesBox *fyne.Container
 var sendButton *widget.Button
+var sendMessageEntry *widget.Entry
+var messagesBoxScroll *container.Scroll
 
 func main() {
 	a = app.New()
@@ -80,45 +82,57 @@ func loginFunction() {
 	loginWin.Show()
 }
 
-func submited() {
+func checkInfos() (bool, string) {
 	if pseudoEntry.Text == "" {
 		dialog.NewError(errors.New("veuillez entrer un pseudo"), loginWin).Show()
-		return
+		return false, ""
 	}
 	if passwordEntry.Text == "" {
 		dialog.NewError(errors.New("veuillez entrer un mot de passe"), loginWin).Show()
-		return
+		return false, ""
 	}
 	loginInfosVar = loginInfos{pseudo: pseudoEntry.Text, password: passwordEntry.Text}
+	return true, loginInfosVar.pseudo + ":" + loginInfosVar.password
+}
+
+func submited() {
+	infosOk, infos := checkInfos()
+	if !infosOk {
+		return
+	}
 	var err error
+	var address string
+	var port string
 	if serverAddressEntry.Text == "" {
-		serverAddressEntry.Text = serverAddressEntry.PlaceHolder
+		address = serverAddressEntry.PlaceHolder
 	}
 	if serverPortEntry.Text == "" {
-		serverPortEntry.Text = serverPortEntry.PlaceHolder
+		port = serverPortEntry.PlaceHolder
 	}
-	conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", serverAddressEntry.Text, serverPortEntry.Text))
+	conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", address, port))
 	if err != nil {
 		dialog.NewError(err, loginWin).Show()
-		conn.Close()
 		return
 	}
 	for {
-		_, err := conn.Write([]byte(loginInfosVar.pseudo + ":" + loginInfosVar.password))
+		_, err := conn.Write([]byte(infos))
 		if err != nil {
 			continue
 		}
-		var response []byte
+		response := make([]byte, 1024)
 		n, err := conn.Read(response)
 		if err != nil {
 			dialog.NewError(err, loginWin).Show()
 			continue
 		}
 		var stringResponse string = string(response[:n])
-		if stringResponse != "no" {
+		if stringResponse == "no" {
+			dialog.NewError(errors.New("informations de connexion invalides"), loginWin).Show()
+			return
+		}
+		if stringResponse == "yes" {
 			break
 		}
-		dialog.NewError(errors.New("pseudo too short"), loginWin).Show()
 	}
 	loginWin.Close()
 	modifyWindowToBeAbleToSendMessages()
@@ -126,7 +140,7 @@ func submited() {
 
 func modifyWindowToBeAbleToSendMessages() {
 	//Bottom
-	sendMessageEntry := widget.NewEntry()
+	sendMessageEntry = widget.NewEntry()
 	sendMessageEntry.SetPlaceHolder("Votre message ici")
 	sendButton = widget.NewButton("Envoyer", sendMessage)
 	sendMessageContainer := container.NewBorder(nil, nil, nil, sendButton, sendMessageEntry)
@@ -134,18 +148,20 @@ func modifyWindowToBeAbleToSendMessages() {
 	messageEntry := widget.NewEntry()
 	messageEntry.SetText("test\ntest\nmdr")
 	messageEntry.Disable()
-	messagesBox = container.NewGridWithRows(1, messageEntry)
-	all := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBox)
+	messagesBox = container.NewVBox(messageEntry)
+	messagesBoxScroll = container.NewScroll(messagesBox)
+	all := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBoxScroll)
 	w.SetContent(all)
 	listenForMessages()
 }
 
 func sendMessage() {
-	_, err := conn.Write([]byte(sendButton.Text))
+	_, err := conn.Write([]byte(sendMessageEntry.Text))
 	if err != nil {
 		dialog.NewError(err, loginWin).Show()
 		return
 	}
+	sendMessageEntry.SetText("")
 }
 
 func listenForMessages() {
@@ -154,12 +170,14 @@ func listenForMessages() {
 		n, err := conn.Read(slice)
 		if err != nil {
 			dialog.NewError(err, loginWin).Show()
+			continue
 		}
 		msgString := string(slice[:n])
 		msgEntry := widget.NewEntry()
 		msgEntry.Disable()
 		msgEntry.SetText(msgString)
-		messagesBox.Add(msgEntry)
-		log.Println(msgString)
+		msgEntryMax := container.NewMax(msgEntry)
+		messagesBox.Add(msgEntryMax)
+		log.Print(msgString)
 	}
 }
