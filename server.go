@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -34,35 +35,48 @@ func main() {
 	}
 }
 
-func processClient(conn net.Conn) {
+func verifyLoginInfos(conn net.Conn) (socket, error) {
 	slice := make([]byte, 1024)
-	n, err := conn.Read(slice)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	infos := string(slice[:n])
-	var contains bool
-	for _, info := range loginInfos {
-		if infos == info {
-			contains = true
+	var infos string
+	for {
+		n, err := conn.Read(slice)
+		if err != nil {
+			log.Print(err)
+			return socket{}, errors.New("cannot read from client " + conn.RemoteAddr().String())
 		}
-	}
-	if !contains {
-		conn.Write([]byte("no"))
-		conn.Close()
-		return
-	}
-	_, err = conn.Write([]byte("yes"))
-	if err != nil {
-		log.Print(err)
-		return
+		infos = string(slice[:n])
+		var contains bool
+		for _, info := range loginInfos {
+			if infos == info {
+				contains = true
+			}
+		}
+		if !contains {
+			conn.Write([]byte("no"))
+			continue
+		}
+		_, err = conn.Write([]byte("yes"))
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+		break
 	}
 	pseudo := strings.Split(infos, ":")[0]
 	password := strings.Split(infos, ":")[1]
-	sockets = append(sockets, socket{socket: conn, pseudo: pseudo, password: password})
-	broadcast(pseudo + " vient de se connecter au chat !")
-	go listenMsg(pseudo, conn)
+	usersocket := socket{socket: conn, pseudo: pseudo, password: password}
+	sockets = append(sockets, usersocket)
+	return usersocket, nil
+}
+
+func processClient(conn net.Conn) {
+	usersocket, err := verifyLoginInfos(conn)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	broadcast(usersocket.pseudo + " vient de se connecter au chat !")
+	go listenMsg(usersocket.pseudo, conn)
 }
 
 func broadcast(msg string) {
@@ -78,7 +92,7 @@ func listenMsg(sender string, conn net.Conn) {
 		n, err := conn.Read(message)
 		if err != nil {
 			removeElement(conn)
-			log.Print(err)
+			log.Printf(sender + "vient de se déconnecter du chat !\n")
 			break
 		}
 		messageString := string(message[:n])
