@@ -17,8 +17,9 @@ var sockets []socket
 var loginInfos []string
 
 func main() {
-	loginInfos = append(loginInfos, "sltXD:123mdr")
-	loginInfos = append(loginInfos, "test:jspmdr")
+	//Login infos to modify
+	loginInfos = append(loginInfos, "admin:password")
+	loginInfos = append(loginInfos, "example:example")
 	log.Println("Starting server...")
 	server, err := net.Listen("tcp", ":8888")
 	if err != nil {
@@ -34,7 +35,7 @@ func main() {
 }
 
 func processClient(conn net.Conn) {
-	var slice []byte
+	slice := make([]byte, 1024)
 	n, err := conn.Read(slice)
 	if err != nil {
 		log.Print(err)
@@ -52,15 +53,20 @@ func processClient(conn net.Conn) {
 		conn.Close()
 		return
 	}
+	_, err = conn.Write([]byte("yes"))
+	if err != nil {
+		log.Print(err)
+		return
+	}
 	pseudo := strings.Split(infos, ":")[0]
 	password := strings.Split(infos, ":")[1]
 	sockets = append(sockets, socket{socket: conn, pseudo: pseudo, password: password})
 	broadcast(pseudo + " vient de se connecter au chat !")
-	listenMsg(pseudo, conn)
+	go listenMsg(pseudo, conn)
 }
 
 func broadcast(msg string) {
-	log.Println(msg)
+	log.Print(msg)
 	for _, socket := range sockets {
 		socket.socket.Write([]byte(msg))
 	}
@@ -68,15 +74,17 @@ func broadcast(msg string) {
 
 func listenMsg(sender string, conn net.Conn) {
 	message := make([]byte, 1024)
-	n, err := conn.Read(message)
-	if err != nil {
-		removeElement(conn)
-		log.Print(err)
-		return
-	}
-	messageString := string(message[:n])
+	for {
+		n, err := conn.Read(message)
+		if err != nil {
+			removeElement(conn)
+			log.Print(err)
+			break
+		}
+		messageString := string(message[:n])
 
-	broadcast(fmt.Sprintf("%s : %s\n", sender, messageString))
+		broadcast(fmt.Sprintf("%s : %s", sender, messageString))
+	}
 }
 
 func removeElement(element net.Conn) {
