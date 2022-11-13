@@ -24,23 +24,30 @@ func submited() {
 	conn, err = net.Dial(strings.ToLower(network.Selected), fmt.Sprintf("%s:%s", address, port))
 	if err != nil {
 		displayErrToLoginWin(err)
+		return
 	}
 	_, err = conn.Write([]byte(infos))
 	if err != nil {
 		displayErrToLoginWin(err)
+		conn.Close()
+		return
 	}
 	response := make([]byte, 1024)
 	n, err := conn.Read(response)
 	if err != nil {
 		displayErrToLoginWin(err)
+		conn.Close()
+		return
 	}
 	var stringResponse string = string(response[:n])
 	if stringResponse == "no" {
 		displayErrToLoginWin(errors.New("informations de connexion invalides"))
+		conn.Close()
 		return
 	}
 	if stringResponse == "already connected" {
 		displayErrToLoginWin(errors.New("déjà connecté"))
+		conn.Close()
 		return
 	}
 	if stringResponse != "yes" {
