@@ -55,20 +55,22 @@ func verifyLoginInfos(conn net.Conn) (socket, error) {
 			conn.Write([]byte("no"))
 			continue
 		}
-		_, err = conn.Write([]byte("yes"))
-		if err != nil {
-			log.Print(err)
-			continue
-		}
 		break
 	}
 	pseudo := strings.Split(infos, ":")[0]
 	password := strings.Split(infos, ":")[1]
 	if !isAlreadyConnected(pseudo) {
 		usersocket := socket{socket: conn, pseudo: pseudo, password: password}
+		_, err := conn.Write([]byte("yes"))
+		if err != nil {
+			log.Print(err)
+			return socket{}, errors.New("error")
+		}
 		sockets = append(sockets, usersocket)
 		return usersocket, nil
 	}
+
+	conn.Write([]byte("already connected"))
 	return socket{}, errors.New(pseudo + " already connected")
 }
 
@@ -92,6 +94,9 @@ func processClient(conn net.Conn) {
 }
 
 func broadcast(msg string) {
+	if strings.Split(msg, " : ")[0] == "serv" {
+		msg = strings.Join(strings.Split(msg, " : ")[1:], "")
+	}
 	log.Print(msg)
 	for _, socket := range sockets {
 		socket.socket.Write([]byte(msg))
@@ -104,11 +109,10 @@ func listenMsg(sender string, conn net.Conn) {
 		n, err := conn.Read(message)
 		if err != nil {
 			removeElement(conn)
-			log.Printf(sender + " vient de se déconnecter du chat !\n")
+			broadcast("serv : " + sender + " vient de se déconnecter du chat !\n")
 			break
 		}
 		messageString := string(message[:n])
-
 		broadcast(fmt.Sprintf("%s : %s", sender, messageString))
 	}
 }
