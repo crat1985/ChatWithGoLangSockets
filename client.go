@@ -106,7 +106,7 @@ func createConversationsContainer() *container.AppTabs {
 	messagesBoxElement := container.NewTabItem("1", messagesBoxScroll)
 	convContainer := container.NewAppTabs(
 		messagesBoxElement,
-		container.NewTabItem("2", widget.NewLabel("En cous de développement...")),
+		container.NewTabItem("2", widget.NewLabel("En cours de développement...")),
 	)
 	return convContainer
 }
