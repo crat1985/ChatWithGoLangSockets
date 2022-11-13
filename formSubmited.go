@@ -39,6 +39,10 @@ func submited() {
 		displayErrToLoginWin(errors.New("informations de connexion invalides"))
 		return
 	}
+	if stringResponse == "already connected" {
+		displayErrToLoginWin(errors.New("déjà connecté"))
+		return
+	}
 	if stringResponse != "yes" {
 		return
 	}
