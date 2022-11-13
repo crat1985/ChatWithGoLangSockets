@@ -34,6 +34,7 @@ var chatWin fyne.Window
 var network *widget.RadioGroup
 var conversationsContainer *container.DocTabs
 var messagesBoxTabItem *container.TabItem
+var sendMessageContainer *fyne.Container
 
 func main() {
 	a = app.New()
@@ -104,7 +105,8 @@ func loginFunction() {
 
 func createDocTabs() *container.DocTabs {
 	messagesBoxScroll = createMessageBoxScroll()
-	messagesBoxTabItem = container.NewTabItem("Général", messagesBoxScroll)
+	sendMessageContainerBorder := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBoxScroll)
+	messagesBoxTabItem = container.NewTabItem("Général", sendMessageContainerBorder)
 	convContainer := container.NewDocTabs(
 		messagesBoxTabItem,
 	)
@@ -131,10 +133,10 @@ func createLeftPanel() *fyne.Container {
 func displayChatWin() {
 	chatWin = a.NewWindow("Chat en temps réel")
 	//Bottom
-	sendMessageContainer := createSendMessageContainer()
+	sendMessageContainer = createSendMessageContainer()
 	//Top
 	conversationsContainer = createDocTabs()
-	all := container.NewBorder(nil, sendMessageContainer, createLeftPanel(), nil, conversationsContainer)
+	all := container.NewBorder(nil, nil, createLeftPanel(), nil, conversationsContainer)
 	w.Close()
 	chatWin.SetContent(all)
 	chatWin.Resize(fyne.NewSize(720, 480))
