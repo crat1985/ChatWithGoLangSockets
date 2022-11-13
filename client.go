@@ -32,7 +32,8 @@ var sendMessageEntry *customSendMessageEntry
 var messagesBoxScroll *container.Scroll
 var chatWin fyne.Window
 var network *widget.RadioGroup
-var conversationsContainer *container.AppTabs
+var conversationsContainer *container.DocTabs
+var messagesBoxTabItem *container.TabItem
 
 func main() {
 	a = app.New()
@@ -44,7 +45,7 @@ func main() {
 	w.ShowAndRun()
 }
 
-func displayErr(err error) {
+func displayErrToLoginWin(err error) {
 	dialog.NewError(err, loginWin).Show()
 }
 
@@ -65,7 +66,7 @@ func createLoginForm() *widget.Form {
 	passwordEntry = widget.NewPasswordEntry()
 	passwordEntry.SetPlaceHolder("Mot de passe")
 	form := widget.NewForm(
-		widget.NewFormItem("Network :", network),
+		widget.NewFormItem("Réseau :", network),
 		widget.NewFormItem("Adresse du serveur :", serverAddressEntry),
 		widget.NewFormItem("Port du serveur :", serverPortEntry),
 		widget.NewFormItem("Pseudo :", pseudoEntry),
@@ -101,23 +102,39 @@ func loginFunction() {
 	createLoginWin()
 }
 
-func createConversationsContainer() *container.AppTabs {
+func createDocTabs() *container.DocTabs {
 	messagesBoxScroll = createMessageBoxScroll()
-	messagesBoxElement := container.NewTabItem("1", messagesBoxScroll)
-	convContainer := container.NewAppTabs(
-		messagesBoxElement,
-		container.NewTabItem("2", widget.NewLabel("En cours de développement...")),
+	messagesBoxTabItem = container.NewTabItem("Général", messagesBoxScroll)
+	convContainer := container.NewDocTabs(
+		messagesBoxTabItem,
 	)
 	return convContainer
 }
 
+func displayGeneralConv() {
+	for _, value := range conversationsContainer.Items {
+		if value.Text == "Général" {
+			return
+		}
+	}
+	conversationsContainer.Append(messagesBoxTabItem)
+}
+
+func createLeftPanel() *fyne.Container {
+	leftPanel := container.NewVBox(
+		widget.NewLabel("Conversations"),
+		widget.NewButton("Général", displayGeneralConv),
+	)
+	return leftPanel
+}
+
 func displayChatWin() {
-	chatWin = a.NewWindow("Chat")
+	chatWin = a.NewWindow("Chat en temps réel")
 	//Bottom
 	sendMessageContainer := createSendMessageContainer()
 	//Top
-	conversationsContainer = createConversationsContainer()
-	all := container.NewBorder(nil, sendMessageContainer, nil, nil, conversationsContainer)
+	conversationsContainer = createDocTabs()
+	all := container.NewBorder(nil, sendMessageContainer, createLeftPanel(), nil, conversationsContainer)
 	w.Close()
 	chatWin.SetContent(all)
 	chatWin.Resize(fyne.NewSize(720, 480))
@@ -128,7 +145,7 @@ func displayChatWin() {
 func sendMessage() {
 	_, err := conn.Write([]byte(sendMessageEntry.Text))
 	if err != nil {
-		displayErr(err)
+		displayErrToLoginWin(err)
 	}
 	sendMessageEntry.SetText("")
 	chatWin.Canvas().Focus(sendMessageEntry)

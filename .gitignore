@@ -1,4 +1,5 @@
 /.idea
 /fyne-cross
-/build.sh
+/buildLinux.sh
+/buildWin.sh
 /Icon.png
