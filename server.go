@@ -104,7 +104,7 @@ func listenMsg(sender string, conn net.Conn) {
 		n, err := conn.Read(message)
 		if err != nil {
 			removeElement(conn)
-			log.Printf(sender + "vient de se déconnecter du chat !\n")
+			log.Printf(sender + " vient de se déconnecter du chat !\n")
 			break
 		}
 		messageString := string(message[:n])
