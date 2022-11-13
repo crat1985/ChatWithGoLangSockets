@@ -17,9 +17,13 @@ func submited() {
 	var port string
 	if serverAddressEntry.Text == "" {
 		address = serverAddressEntry.PlaceHolder
+	} else {
+		address = serverAddressEntry.Text
 	}
 	if serverPortEntry.Text == "" {
 		port = serverPortEntry.PlaceHolder
+	} else {
+		address = serverPortEntry.Text
 	}
 	conn, err = net.Dial(strings.ToLower(network.Selected), fmt.Sprintf("%s:%s", address, port))
 	if err != nil {
