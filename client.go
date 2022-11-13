@@ -32,6 +32,7 @@ var sendMessageEntry *customSendMessageEntry
 var messagesBoxScroll *container.Scroll
 var chatWin fyne.Window
 var network *widget.RadioGroup
+var conversationsContainer *container.AppTabs
 
 func main() {
 	a = app.New()
@@ -100,13 +101,23 @@ func loginFunction() {
 	createLoginWin()
 }
 
+func createConversationsContainer() *container.AppTabs {
+	messagesBoxScroll = createMessageBoxScroll()
+	messagesBoxElement := container.NewTabItem("1", messagesBoxScroll)
+	convContainer := container.NewAppTabs(
+		messagesBoxElement,
+		container.NewTabItem("2", widget.NewLabel("En cous de développement...")),
+	)
+	return convContainer
+}
+
 func displayChatWin() {
 	chatWin = a.NewWindow("Chat")
 	//Bottom
 	sendMessageContainer := createSendMessageContainer()
 	//Top
-	messagesBoxScroll = createMessageBoxScroll()
-	all := container.NewBorder(nil, sendMessageContainer, nil, nil, messagesBoxScroll)
+	conversationsContainer = createConversationsContainer()
+	all := container.NewBorder(nil, sendMessageContainer, nil, nil, conversationsContainer)
 	w.Close()
 	chatWin.SetContent(all)
 	chatWin.Resize(fyne.NewSize(720, 480))
