@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 )
 
 func submited() {
@@ -20,7 +21,7 @@ func submited() {
 	if serverPortEntry.Text == "" {
 		port = serverPortEntry.PlaceHolder
 	}
-	conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", address, port))
+	conn, err = net.Dial(strings.ToLower(network.Selected), fmt.Sprintf("%s:%s", address, port))
 	if err != nil {
 		displayErr(err)
 	}

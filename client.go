@@ -31,6 +31,7 @@ var sendButton *widget.Button
 var sendMessageEntry *customSendMessageEntry
 var messagesBoxScroll *container.Scroll
 var chatWin fyne.Window
+var network *widget.RadioGroup
 
 func main() {
 	a = app.New()
@@ -52,6 +53,8 @@ func loginWinClosed() {
 }
 
 func createLoginForm() *widget.Form {
+	network = widget.NewRadioGroup([]string{"TCP", "UDP"}, nil)
+	network.SetSelected("TCP")
 	serverAddressEntry = widget.NewEntry()
 	serverAddressEntry.SetPlaceHolder("localhost")
 	serverPortEntry = widget.NewEntry()
@@ -61,6 +64,7 @@ func createLoginForm() *widget.Form {
 	passwordEntry = widget.NewPasswordEntry()
 	passwordEntry.SetPlaceHolder("Mot de passe")
 	form := widget.NewForm(
+		widget.NewFormItem("Network :", network),
 		widget.NewFormItem("Adresse du serveur :", serverAddressEntry),
 		widget.NewFormItem("Port du serveur :", serverPortEntry),
 		widget.NewFormItem("Pseudo :", pseudoEntry),
