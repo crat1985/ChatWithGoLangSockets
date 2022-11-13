@@ -64,9 +64,21 @@ func verifyLoginInfos(conn net.Conn) (socket, error) {
 	}
 	pseudo := strings.Split(infos, ":")[0]
 	password := strings.Split(infos, ":")[1]
-	usersocket := socket{socket: conn, pseudo: pseudo, password: password}
-	sockets = append(sockets, usersocket)
-	return usersocket, nil
+	if !isAlreadyConnected(pseudo) {
+		usersocket := socket{socket: conn, pseudo: pseudo, password: password}
+		sockets = append(sockets, usersocket)
+		return usersocket, nil
+	}
+	return socket{}, errors.New(pseudo + " already connected")
+}
+
+func isAlreadyConnected(pseudo string) bool {
+	for _, socket := range sockets {
+		if socket.pseudo == pseudo {
+			return true
+		}
+	}
+	return false
 }
 
 func processClient(conn net.Conn) {
